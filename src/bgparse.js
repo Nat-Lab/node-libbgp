@@ -41,20 +41,37 @@ var RawParser = {
   }
 };
 
-
+/**
+ * Prase BGP messages
+ * @constructor
+ * @param {Buffer} buf - The raw buffer received from tcp server.
+ * @return {Objects[]} prased messages
+ */
 var Parse = function (buf) {
-  var header = buf.slice(16, 19),
-      data = buf.slice(19);
+  var msgs = [];
 
-  var header_parsed = RawParser.header(header),
-      type = header_parsed.type;
+  while (buf.length > 0) {
+    buf = buf.slice(16); // remove marker
+    var header = buf.slice(0, 3),
+        data = buf.slice(3);
 
-   switch (type) {
-     case 1: {
-       body_prased = RawParser.open(data);
-       break;
-     }
-   };
+    var header_parsed = RawParser.header(header),
+        type = header_parsed.type,
+        length = header_parsed.length;
 
-   return {header: header_parsed, body: body_prased};
+     buf = buf.slice(2 + length); // move to next msg.
+
+     switch (type) {
+       case 1: {
+         body_prased = RawParser.open(data);
+         break;
+       }
+     };
+
+     msgs.push({header: header_parsed, body: body_prased});
+  }
+
+  return msgs;
 };
+
+module.exports = { Parse };
