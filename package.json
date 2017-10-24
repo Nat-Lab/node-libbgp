@@ -1,0 +1,26 @@
+{
+  "name": "libbgp",
+  "version": "0.0.1",
+  "description": "A simple BGP4 library for nodejs.",
+  "main": "src/libbgp.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nat-lab/node-libbgp.git"
+  },
+  "keywords": [
+    "bgp",
+    "network"
+  ],
+  "author": "nat <nat@nat.moe>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/nat-lab/node-libbgp/issues"
+  },
+  "homepage": "https://github.com/nat-lab/node-libbgp#readme",
+  "dependencies": {
+    "binary-parser": "^1.3.0"
+  }
+}
