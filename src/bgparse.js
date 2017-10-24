@@ -48,6 +48,11 @@ var RawParser = {
  * @return {Objects[]} prased messages
  */
 var Parse = function (buf) {
+  if (buf.length < 19) {
+    console.log(`[${Date.now()}] Got funny thing (buffer length < 19).`)
+    return [];
+  }
+
   var msgs = [];
 
   while (buf.length > 0) {
@@ -56,10 +61,11 @@ var Parse = function (buf) {
         data = buf.slice(3);
 
     var header_parsed = RawParser.header(header),
+        body_prased,
         type = header_parsed.type,
-        length = header_parsed.length;
+        msg_length = header_parsed.length - 19;
 
-     buf = buf.slice(2 + length); // move to next msg.
+     buf = buf.slice(3 + msg_length); // move to next msg.
 
      switch (type) {
        case 1: {
@@ -67,6 +73,11 @@ var Parse = function (buf) {
          break;
        }
      };
+
+     if (!body_prased || !header_parsed) {
+       console.log(`[${Date.now()}] Got something I don't understand.`)
+       return [];
+     }
 
      msgs.push({header: header_parsed, body: body_prased});
   }
