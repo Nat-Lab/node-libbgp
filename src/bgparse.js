@@ -1,13 +1,11 @@
-const BinParse = require('binary-parser').Parser;
+const BinaryParse = require('binary-parser').Parser;
 
 var Parsers = {
-  header: buf => new BinParse() // parse header
-    .endianess('big')
+  header: buf => new BinaryParse().endianess('big') // parse header
     .uint16('length')
     .bit8('type')
     .parse(buf),
-  open: buf => new BinParse() // parse OPEN message
-    .endianess('big')
+  open: buf => new BinaryParse().endianess('big') // parse OPEN message
     .uint8('version')
     .uint16('my_asn')
     .uint16('hold_time')
@@ -19,7 +17,7 @@ var Parsers = {
     .uint8('param_len')
     .array('param', {
       lengthInBytes: 'param_len',
-      type: new BinParse()
+      type: new BinaryParse()
         .endianess('big')
         .bit8('type')
         .uint8('length')
@@ -28,22 +26,40 @@ var Parsers = {
         }),
     })
     .parse(buf),
-  update: buf => new BinParse() // parse UPDATE message
-    .endianess('big')
+  update: buf => new BinaryParse().endianess('big') // parse UPDATE message
     .uint16('withdraw_routes_len')
     .array('withdraw_routes', {
       lengthInBytes: 'withdraw_routes_len',
-      type: new BinParse()
+      type: new BinaryParse()
         .endianess('big')
         .uint8('length')
-        .buffer('prefix', { // TODO v4/v6 prefix parse
-          length: function() { return this.length; }
+        .choice('prefix', {
+          tag: function () { return Math.ceil(this.length / 8) * 8 },
+          choices: {
+            0: new BinaryParse(),
+            8: new BinaryParse().endianess('big').array('', {
+              type: 'uint8',
+              length: 1
+            }),
+            16: new BinaryParse().endianess('big').array('', {
+              type: 'uint8',
+              length: 2
+            }),
+            24: new BinaryParse().endianess('big').array('', {
+              type: 'uint8',
+              length: 3
+            }),
+            32: new BinaryParse().endianess('big').array('', {
+              type: 'uint8',
+              length: 4
+            })
+          }
         })
     })
     .uint16('total_path_attr_len')
     .array('path_attr', {
       lengthInBytes: 'total_path_attr_len',
-      type: new BinParse()
+      type: new BinaryParse()
         .endianess('big')
         .bit1('is_optional')
         .bit1('is_transitive')
@@ -54,8 +70,8 @@ var Parsers = {
         .choice('length', {
           tag: 'is_extened',
           choices: { // if extend, length attr has 2 octets.
-            0: new BinParse().endianess('big').uint8(),
-            1: new BinParse().endianess('big').uint16()
+            0: new BinaryParse().endianess('big').uint8(),
+            1: new BinaryParse().endianess('big').uint16()
           }
         })
         .choice('value', {
@@ -64,25 +80,25 @@ var Parsers = {
             return this.attr_type;
           },
           choices: {
-            0: new BinParse(), // length is 0, do nothing
-            1: new BinParse().endianess('big').uint8('origin'),
-            2: new BinParse().endianess('big')
+            0: new BinaryParse(), // length is 0, do nothing
+            1: new BinaryParse().endianess('big').uint8('origin'),
+            2: new BinaryParse().endianess('big')
                  .uint8('as_path_type')
                  .uint8('as_path_len')
                  .array('as_path', {
                    length: 'as_path_len',
-                   type: new BinParse().endianess('big').uint16()
+                   type: new BinaryParse().endianess('big').uint16()
                  }),
-            3: new BinParse().endianess('big')
+            3: new BinaryParse().endianess('big')
                  .array('nexthop', {
                    type: 'uint8',
                    length: 4,
                     formatter: arr => arr.join('.')
                  }),
-            4: new BinParse().endianess('big').uint32('med'),
-            5: new BinParse().endianess('big').uint32('local_pref'),
-            6: new BinParse(), // TODO ATOMIC_AGGREGATE
-            7: new BinParse().endianess('big')
+            4: new BinaryParse().endianess('big').uint32('med'),
+            5: new BinaryParse().endianess('big').uint32('local_pref'),
+            6: new BinaryParse(), // TODO ATOMIC_AGGREGATE
+            7: new BinaryParse().endianess('big')
                  .uint16('aggregator_asn')
                  .array('aggregator', {
                    type: 'uint8',
@@ -90,15 +106,34 @@ var Parsers = {
                    formatter: arr => arr.join('.')
                  })
           },
-          defaultChoice: new BinParse() // what?
+          defaultChoice: new BinaryParse() // what?
         })
     })
     .array('nlri', {
       readUntil: 'eof',
-      type: new BinParse().endianess('big')
+      type: new BinaryParse().endianess('big')
               .uint8('length')
-              .buffer('prefix', { // TODO v4/v6 prefix parse
-                length: function() { return this.length; }
+              .choice('prefix', {
+                tag: function () { return Math.ceil(this.length / 8) * 8 },
+                choices: {
+                  0: new BinaryParse(),
+                  8: new BinaryParse().endianess('big').array('', {
+                    type: 'uint8',
+                    length: 1
+                  }),
+                  16: new BinaryParse().endianess('big').array('', {
+                    type: 'uint8',
+                    length: 2
+                  }),
+                  24: new BinaryParse().endianess('big').array('', {
+                    type: 'uint8',
+                    length: 3
+                  }),
+                  32: new BinaryParse().endianess('big').array('', {
+                    type: 'uint8',
+                    length: 4
+                  })
+                }
               })
     })
     .parse(buf)
