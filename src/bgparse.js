@@ -2,10 +2,12 @@ const BinaryParse = require('binary-parser').Parser;
 
 var Parsers = {
   header: buf => new BinaryParse().endianess('big') // parse header
+    .skip(16)
     .uint16('length')
     .bit8('type')
     .parse(buf),
   open: buf => new BinaryParse().endianess('big') // parse OPEN message
+    .skip(19)
     .uint8('version')
     .uint16('my_asn')
     .uint16('hold_time')
@@ -27,6 +29,7 @@ var Parsers = {
     })
     .parse(buf),
   update: buf => new BinaryParse().endianess('big') // parse UPDATE message
+    .skip(19)
     .uint16('withdraw_routes_len')
     .array('withdraw_routes', {
       lengthInBytes: 'withdraw_routes_len',
@@ -39,19 +42,23 @@ var Parsers = {
             0: new BinaryParse(),
             8: new BinaryParse().endianess('big').array('', {
               type: 'uint8',
-              length: 1
+              length: 1,
+              formatter: arr => arr.concat([0, 0, 0]).slice(0, 4).join('.')
             }),
             16: new BinaryParse().endianess('big').array('', {
               type: 'uint8',
-              length: 2
+              length: 2,
+              formatter: arr => arr.concat([0, 0, 0]).slice(0, 4).join('.')
             }),
             24: new BinaryParse().endianess('big').array('', {
               type: 'uint8',
-              length: 3
+              length: 3,
+              formatter: arr => arr.concat([0, 0, 0]).slice(0, 4).join('.')
             }),
             32: new BinaryParse().endianess('big').array('', {
               type: 'uint8',
-              length: 4
+              length: 4,
+              formatter: arr => arr.concat([0, 0, 0]).slice(0, 4).join('.')
             })
           }
         })
@@ -74,7 +81,7 @@ var Parsers = {
             1: new BinaryParse().endianess('big').uint16()
           }
         })
-        .choice('value', {
+        .choice('', {
           tag: function () {
             if (this.length == 0 && this.attr_type != 6) return 0;
             return this.attr_type;
@@ -119,19 +126,23 @@ var Parsers = {
                   0: new BinaryParse(),
                   8: new BinaryParse().endianess('big').array('', {
                     type: 'uint8',
-                    length: 1
+                    length: 1,
+                    formatter: arr => arr.concat([0, 0, 0]).slice(0, 4).join('.')
                   }),
                   16: new BinaryParse().endianess('big').array('', {
                     type: 'uint8',
-                    length: 2
+                    length: 2,
+                    formatter: arr => arr.concat([0, 0, 0]).slice(0, 4).join('.')
                   }),
                   24: new BinaryParse().endianess('big').array('', {
                     type: 'uint8',
-                    length: 3
+                    length: 3,
+                    formatter: arr => arr.concat([0, 0, 0]).slice(0, 4).join('.')
                   }),
                   32: new BinaryParse().endianess('big').array('', {
                     type: 'uint8',
-                    length: 4
+                    length: 4,
+                    formatter: arr => arr.concat([0, 0, 0]).slice(0, 4).join('.')
                   })
                 }
               })
@@ -142,8 +153,8 @@ var Parsers = {
 /**
  * Prase BGP messages
  * @constructor
- * @param {Buffer} buf - The raw buffer received from tcp server.
- * @return {Objects[]} prased messages
+ * @param {Buffer} buf - The raw message buffer received.
+ * @return {Objects} prased messages
  */
 var Parse = function (buf) {
   if (buf.length < 19) {
@@ -151,33 +162,18 @@ var Parse = function (buf) {
     return [];
   }
 
-  var msgs = [];
+  var ParsersList = [
+    Parsers.header,
+    Parsers.open, // Type 1: OPEN
+    Parsers.update, // Type 2: UPDATE
+    console.log, // Type 3: NOTIFY TODO
+    Parsers.header // Type 4: KEEPALIVE
+  ];
 
-  while (buf.length > 0) {
-    var ParsersList = [Parsers.header, Parsers.open, Parsers.update];
+  var header = ParsersList[0](buf.slice(0, 19));
+  var data = ParsersList[header.type](buf.slice(0, header.length));
 
-    buf = buf.slice(16); // remove marker
-    var header = buf.slice(0, 3);
-
-    var header_parsed = ParsersList[0](header),
-        body_prased,
-        type = header_parsed.type,
-        msg_length = header_parsed.length - 16, // msg_len (w/o marker, w/ header)
-        data = buf.slice(3, msg_length);
-
-     buf = buf.slice(msg_length); // move to next msg.
-
-     body_prased = ParsersList[type](data);
-
-     if (!body_prased || !header_parsed) {
-       console.log(`[${Date.now()}] Got something I don't understand.`)
-       return [];
-     }
-
-     msgs.push({header: header_parsed, body: body_prased});
-  }
-
-  return msgs;
+  return {header, data};
 };
 
-module.exports = { Parse };
+module.exports = { Parse, Parsers };
