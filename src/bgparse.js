@@ -123,13 +123,13 @@ var Parse = function (buf) {
 
   while (buf.length > 0) {
     buf = buf.slice(16); // remove marker
-    var header = buf.slice(0, 3),
-        data = buf.slice(3);
+    var header = buf.slice(0, 3);
 
     var header_parsed = RawParser.header(header),
         body_prased,
         type = header_parsed.type,
-        msg_length = header_parsed.length - 19;
+        msg_length = header_parsed.length - 19,
+        data = buf.slice(3, msg_length + 3);
 
      buf = buf.slice(3 + msg_length); // move to next msg.
 
