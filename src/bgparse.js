@@ -5,7 +5,7 @@ var RawParser = {
     .endianess('big')
     .uint16('length')
     .bit8('type')
-    .parse(buf)
+    .parse(buf),
   open: buf => new BinParse() // parse OPEN message
     .endianess('big')
     .uint8('version')
@@ -28,8 +28,82 @@ var RawParser = {
         }),
     })
     .parse(buf),
-  update: function (buf) { // parse UPDATE message
-
+  update: function(buf) {
+    var update_msg_len = buf.length;
+    return new BinParse() // parse UPDATE message
+      .endianess('big')
+      .uint16('withdraw_routes_len')
+      .array('withdraw_routes', {
+        lengthInBytes: 'withdraw_routes_len',
+        type: new BinParse()
+          .endianess('big')
+          .uint8('length')
+          .buffer('prefix', { // TODO v4/v6 prefix parse
+            length: function() { return this.length; }
+          })
+      })
+      .uint16('total_path_attr_len')
+      .array('path_attr', {
+        lengthInBytes: 'total_path_attr_len',
+        type: new BinParse()
+          .endianess('big')
+          .bit1('is_optional')
+          .bit1('is_transitive')
+          .bit1('is_partial')
+          .bit1('is_extened')
+          .bit4('reserved')
+          .uint8('attr_type')
+          .choice('length', {
+            tag: 'is_extened',
+            choices: { // if extend, length attr has 2 octets.
+              0: new BinParse().endianess('big').uint8(),
+              1: new BinParse().endianess('big').uint16()
+            }
+          })
+          .choice('value', {
+            tag: function () {
+              if (this.length == 0 && this.attr_type != 6) return 0;
+              return this.attr_type;
+            },
+            choices: {
+              0: new BinParse(), // length is 0, do nothing
+              1: new BinParse().endianess('big').uint8('origin'),
+              2: new BinParse().endianess('big')
+                   .uint8('as_path_type')
+                   .uint8('as_path_len')
+                   .array('as_path', {
+                     length: 'as_path_len',
+                     type: new BinParse().endianess('big').uint16()
+                   }),
+              3: new BinParse().endianess('big')
+                   .array('nexthop', {
+                     type: 'uint8',
+                     length: 4,
+                      formatter: arr => arr.join('.')
+                   }),
+              4: new BinParse().endianess('big').uint32('med'),
+              5: new BinParse().endianess('big').uint32('local_pref'),
+              6: new BinParse(), // TODO ATOMIC_AGGREGATE
+              7: new BinParse().endianess('big')
+                   .uint16('aggregator_asn')
+                   .array('aggregator', {
+                     type: 'uint8',
+                     length: 4,
+                     formatter: arr => arr.join('.')
+                   })
+            },
+            defaultChoice: new BinParse() // what?
+          })
+      })
+      .array('nlri', {
+        readUntil: 'eof',
+        type: new BinParse().endianess('big')
+                .uint8('length')
+                .buffer('prefix', { // TODO v4/v6 prefix parse
+                  length: function() { return this.length; }
+                })
+      })
+      .parse(buf)
   }
 };
 
