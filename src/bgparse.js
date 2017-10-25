@@ -1,4 +1,5 @@
-const BinaryParse = require('binary-parser').Parser;
+const BinaryParse = require('binary-parser').Parser,
+      through2 = require('through2');
 
 var Parsers = {
   header: buf => new BinaryParse().endianess('big') // parse header
@@ -176,4 +177,23 @@ var Parse = function (buf) {
   return {header, data};
 };
 
-module.exports = { Parse, Parsers };
+var ParseStream = function () {
+  var messages = Buffer.alloc(0);
+
+  var stream = through2({ objectMode: true }, function(chunk, enc, next) {
+    messages = Buffer.concat([messages, chunk]);
+    var msg_header = Parsers.header(messages),
+        msg_len = msg_header.length;
+
+    if (messages.length >= msg_len) {
+      stream.push(Parse(messages.slice(0, msg_len)))
+      messages = messages.slice(msg_len);
+    }
+
+    next();
+  });
+
+  return stream;
+}
+
+module.exports = { Parse, ParseStream, Parsers };
