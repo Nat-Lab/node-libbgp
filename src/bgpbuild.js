@@ -26,7 +26,11 @@ var Builders = (function () {
       return open_fields;
     },
     update: function ({withdraw_routes, path_attr, nlri}) {
-
+      return Buffer.concat([
+        withdraw_routes,
+        path_attr,
+        nlri
+      ]);
     },
     keepalive: function() {
       header.writeUInt8(19, 17); // length: 19
@@ -40,14 +44,72 @@ var Builders = (function () {
     open_param: function() {
 
     },
-    withdraw_routes: function () {
+    withdraw_routes: function (prefixes) {
+      var buf = Buffer.alloc(0);
+      prefixes.forEach(prefix => {
+        var length = Number.parseInt(prefix.split('/')[1]),
+            _prefix = prefix.split('/')[0];
 
+        var bytes = Math.ceil(length / 8);
+        buf = Buffer.concat([
+          buf,
+          Buffer.alloc(1, length),
+          Uint8Array.from(_prefix.split('.').slice(0, bytes).map(n => Number.parseInt(n)))
+        ]);
+      });
+
+      var withdraw_len = Buffer.alloc(2);
+      withdraw_len.writeUInt16BE(buf.length);
+
+      return Buffer.concat([
+        withdraw_len,
+        buf
+      ]);
     },
-    path_attr: function () {
-
+    path_attrs: function (attrs) {
+      return Buffer.alloc(2);
+      // TODO
     },
-    nlri: function () {
+    path_attr: {
+      origin: function () {
 
+      },
+      as_path: function () {
+
+      },
+      nexthtop: function () {
+
+      },
+      med: function () {
+
+      },
+      local_pref: function () {
+
+      },
+      automic_aggregate: function () {
+
+      },
+      aggregator: function () {
+
+      },
+      other: function () {
+
+      }
+    },
+    nlri: function (prefixes) {
+      var buf = Buffer.alloc(0);
+      prefixes.forEach(prefix => {
+        var length = Number.parseInt(prefix.split('/')[1]),
+            _prefix = prefix.split('/')[0];
+
+        var bytes = Math.ceil(length / 8);
+        buf = Buffer.concat([
+          buf,
+          Buffer.alloc(1, length),
+          Uint8Array.from(_prefix.split('.').slice(0, bytes).map(n => Number.parseInt(n)))
+        ]);
+      });
+      return buf;
     }
   }
 

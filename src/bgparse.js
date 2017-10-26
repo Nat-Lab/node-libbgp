@@ -177,7 +177,7 @@ var Parse = function (buf) {
   return {header, data};
 };
 
-var ParseStream = function () {
+var StreamParser = function () {
   var messages = Buffer.alloc(0);
 
   var stream = through2({ objectMode: true }, function(chunk, enc, next) {
@@ -196,4 +196,4 @@ var ParseStream = function () {
   return stream;
 }
 
-module.exports = { Parse, ParseStream, Parsers };
+module.exports = { Parse, Parsers, StreamParser };
