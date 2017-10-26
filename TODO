@@ -1,0 +1,36 @@
+[.] BGP4 message parser
+    [X] Message header
+    [.] OPEN message
+        [ ] Optional param
+            [ ] rfc5492 (Capabilities)
+            [ ] rfc4760 (BGP-MP)
+            [ ] rfc6793 (4b ASN)
+    [.] UPDATE message
+        [X] Withdraw route
+        [.] Path attributes
+            [X] Well-known attrs
+            [ ] rfc1997 (2b Community)
+            [ ] rfc4760 (BGP-MP)
+            [ ] rfc6793 (4b ASN)
+            [ ] rfc5668 (4b Community)
+        [X] NLRI
+    [X] KEEPALIVE message
+    [ ] NOTIFICATION message
+[.] BGP4 message builder
+    [X] Message header
+    [.] OPEN message
+        [ ] Optional param
+            [ ] rfc5492 (Capabilities)
+            [ ] rfc4760 (BGP-MP)
+            [ ] rfc6793 (4b ASN)
+    [.] UPDATE message
+        [X] Withdraw route
+        [ ] Path attributes
+            [ ] Well-known attrs
+            [ ] rfc1997 (2b Community)
+            [ ] rfc4760 (BGP-MP)
+            [ ] rfc6793 (4b ASN)
+            [ ] rfc5668 (4b Community)
+        [X] NLRI
+    [X] KEEPALIVE message
+    [ ] NOTIFICATION message
