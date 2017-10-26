@@ -22,21 +22,34 @@ var Builders = (function () {
         Buffer.alloc(1) // TODO param
       ]);
 
-      open_fields.writeUInt16BE(open_fields.length, 16);
+      open_fields.writeUInt16BE(open_fields.length, 16); // length
       return open_fields;
     },
     update: function ({withdraw_routes, path_attr, nlri}) {
-      return Buffer.concat([
+      header.writeUInt8(2, 18); // Type: UPDATE
+
+      var fields = Buffer.concat([
+        header,
         withdraw_routes,
         path_attr,
         nlri
       ]);
+
+      fields.writeUInt16BE(fields.length, 16); // length
+      return fields;
     },
     keepalive: function() {
       header.writeUInt8(19, 17); // length: 19
       header.writeUInt8(4, 18); // Type: KEEPALIVE
       return header;
     }
+  };
+
+  var path_header = function ({optional = 0, trans = 0, partial = 0, extended = 0, type}) {
+    var buf = Buffer.alloc(2);
+    buf.writeUInt8(parseInt('' + optional + trans + partial + extended + '0000', 2));
+    buf.writeUInt8(type, 1);
+    return buf;
   };
 
   /* Message Components */
@@ -67,21 +80,57 @@ var Builders = (function () {
       ]);
     },
     path_attrs: function (attrs) {
-      return Buffer.alloc(2);
-      // TODO
+      var buf = Buffer.alloc(0);
+      attrs.forEach(attr => {
+        buf = Buffer.concat([buf, attr]);
+      });
+      var attrs_len = Buffer.alloc(2);
+      attrs_len.writeUInt16BE(buf.length);
+
+      return Buffer.concat([attrs_len, buf]);
     },
     path_attr: {
-      origin: function () {
-
+      header: path_header,
+      origin: function (origin) {
+        return Buffer.concat([
+          path_header({trans: 1, type: 1}),
+          Buffer.alloc(1, 1), // length = 1
+          Buffer.alloc(1, origin)
+        ]);
       },
-      as_path: function () {
+      as_path: function (as_path, is_4b) { // TODO 4b ASN
+        var asn_seq = Buffer.alloc(0);
+        as_path.forEach(as => {
+          var as_buf = Buffer.alloc(2); // TODO 4b
+          as_buf.writeUInt16BE(as);
+          asn_seq = Buffer.concat([asn_seq, as_buf]);
+        });
 
+        var seq_buf = Buffer.concat([
+          Buffer.alloc(1, 2), // AS_SEQUENCE
+          Buffer.alloc(1, as_path.length), // # of ASNs in path
+          asn_seq
+        ]);
+
+        return Buffer.concat([
+          path_header({trans: 1, type: 2}),
+          Buffer.alloc(1, seq_buf.length),
+          seq_buf
+        ]);
       },
-      nexthtop: function () {
-
+      nexthtop: function (nexthop) {
+        return Buffer.concat([
+          path_header({trans: 1, type: 3}),
+          Buffer.alloc(1, 4), // length = 4
+          Buffer.from(Uint8Array.from(nexthop.split('.').map(n => Number.parseInt(n))))
+        ])
       },
-      med: function () {
-
+      med: function (med) {
+        return Buffer.concat([
+          path_header({optional: 1, type: 4}),
+          Buffer.alloc(1, 4), // length always 4
+          Buffer.from(Uint8Array.from(nexthop.split('.').map(n => Number.parseInt(n))))
+        ])
       },
       local_pref: function () {
 
@@ -96,7 +145,7 @@ var Builders = (function () {
 
       }
     },
-    nlri: function (prefixes) {
+    prefixes: function (prefixes) {
       var buf = Buffer.alloc(0);
       prefixes.forEach(prefix => {
         var length = Number.parseInt(prefix.split('/')[1]),

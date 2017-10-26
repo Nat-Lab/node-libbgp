@@ -25,8 +25,8 @@
             [ ] rfc6793 (4b ASN)
     [.] UPDATE message
         [X] Withdraw route
-        [ ] Path attributes
-            [ ] Well-known attrs
+        [.] Path attributes
+            [.] Well-known attrs
             [ ] rfc1997 (2b Community)
             [ ] rfc4760 (BGP-MP)
             [ ] rfc6793 (4b ASN)

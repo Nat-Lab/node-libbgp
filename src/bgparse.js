@@ -95,7 +95,7 @@ var Parsers = {
                  .uint8('as_path_len')
                  .array('as_path', {
                    length: 'as_path_len',
-                   type: new BinaryParse().endianess('big').uint16()
+                   type: new BinaryParse().endianess('big').uint16() // TODO 4b ASN
                  }),
             3: new BinaryParse().endianess('big')
                  .array('nexthop', {
@@ -107,7 +107,7 @@ var Parsers = {
             5: new BinaryParse().endianess('big').uint32('local_pref'),
             6: new BinaryParse(), // TODO ATOMIC_AGGREGATE
             7: new BinaryParse().endianess('big')
-                 .uint16('aggregator_asn')
+                 .uint16('aggregator_asn') // TODO 4b ASN
                  .array('aggregator', {
                    type: 'uint8',
                    length: 4,
