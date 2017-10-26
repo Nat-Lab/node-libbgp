@@ -158,11 +158,6 @@ var Parsers = {
  * @return {Objects} prased messages
  */
 var Parse = function (buf) {
-  if (buf.length < 19) {
-    console.log(`[${Date.now()}] Got funny thing (buffer length < 19).`)
-    return [];
-  }
-
   var ParsersList = [
     Parsers.header,
     Parsers.open, // Type 1: OPEN
@@ -181,9 +176,14 @@ var StreamParser = function () {
   var messages = Buffer.alloc(0);
 
   var stream = through2({ objectMode: true }, function(chunk, enc, next) {
+    if(chunk.length < 19) return;
+
     messages = Buffer.concat([messages, chunk]);
     var msg_header = Parsers.header(messages),
         msg_len = msg_header.length;
+
+    if (msg_len < 19 || msg_len > 4096)
+      console.error("Warning: Invalid message size (< 19 or > 4096)");
 
     if (messages.length >= msg_len) {
       stream.push(Parse(messages.slice(0, msg_len)))
