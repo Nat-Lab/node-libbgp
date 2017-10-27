@@ -126,23 +126,40 @@ var Builders = (function () {
         ])
       },
       med: function (med) {
+        var med_buf = Buffer.alloc(4);
+        med_buf.writeUInt32BE(med);
+
         return Buffer.concat([
           path_header({optional: 1, type: 4}),
           Buffer.alloc(1, 4), // length always 4
-          Buffer.from(Uint8Array.from(nexthop.split('.').map(n => Number.parseInt(n))))
+          med_buf
         ])
       },
-      local_pref: function () {
+      local_pref: function (local_pref) {
+        var lp_buf = Buffer.alloc(4);
+        lp_buf.writeUInt32BE(local_pref);
 
+        return Buffer.concat([
+          path_header({optional: 1, type: 5}),
+          Buffer.alloc(1, 4), // length always 4
+          lp_buf
+        ])
       },
       automic_aggregate: function () {
-
+        return Buffer.concat([
+          path_header({optional: 1, type: 6}),
+          Buffer.alloc(1, 0)
+        ]);
       },
-      aggregator: function () {
-
-      },
-      other: function () {
-
+      aggregator: function ({asn, addr}) {
+        var aggr_buf = Buffer.alloc(2);
+        aggr_buf.writeUInt16BE(asn);
+        return Buffer.concat([
+          path_header({trans: 1, type: 7}),
+          Buffer.alloc(1, 6),
+          aggr_buf,
+          Buffer.from(Uint8Array.from(addr.split('.').map(n => Number.parseInt(n))))
+        ]);
       }
     },
     prefixes: function (prefixes) {
